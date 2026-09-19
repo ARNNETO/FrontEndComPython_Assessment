@@ -1,0 +1,22 @@
+[project]
+name = "frondendcompython-assessment"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+authors = [
+    { name = "Neto", email = "a.r.n.n@hotmail.com" }
+]
+requires-python = ">=3.13"
+dependencies = [
+    "mplsoccer>=1.8.1",
+    "pandas>=3.0.6",
+    "statsbombpy>=1.22.0",
+    "streamlit>=1.64.0",
+]
+
+[project.scripts]
+frondendcompython-assessment = "frondendcompython_assessment:main"
+
+[build-system]
+requires = ["uv_build>=0.12.17,<0.13.0"]
+build-backend = "uv_build"

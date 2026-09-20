@@ -1,7 +1,7 @@
 [project]
-name = "frondendcompython-assessment"
+name = "Assessment_FrontEnd_Com_Streamlit"
 version = "0.1.0"
-description = "Add your description here"
+description = "Este projeto tem como objetivo de atender as demandas solicitadas no Assessment na materia FrontEnd Com Streamlit"
 readme = "README.md"
 authors = [
     { name = "Neto", email = "a.r.n.n@hotmail.com" }
@@ -10,6 +10,7 @@ requires-python = ">=3.13"
 dependencies = [
     "mplsoccer>=1.8.1",
     "pandas>=3.0.6",
+    "statsbomb>=0.3.0",
     "statsbombpy>=1.22.0",
     "streamlit>=1.64.0",
 ]
@@ -20,3 +21,6 @@ frondendcompython-assessment = "frondendcompython_assessment:main"
 [build-system]
 requires = ["uv_build>=0.12.17,<0.13.0"]
 build-backend = "uv_build"
+
+[tool.uv]
+package = false

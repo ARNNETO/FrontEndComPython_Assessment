@@ -10,7 +10,7 @@ import time
 st.set_page_config(layout= 'wide')
 
 
-#=============================== FUNÇÕES E CACHE DATA
+#=============================== FUNÇÕES E CACHE_DATA
 @st.cache_data(ttl=3600, show_spinner="Carregando competições...")
 def carregar_competicoes():
     df = sb.competitions()
@@ -47,9 +47,6 @@ def lista_opcoes(dataframe_lista: pd.DataFrame,
     return sorted(dataframe_lista[coluna].unique().tolist())
 
 def mapa_passes(player_name, player_df):
-    # player_filter = (df.type_name == 'Pass') & (df.player_name == player_name)
-    # player_df = df.loc[player_filter, ['x', 'y', 'end_x', 'end_y']]
-
     pitch = Pitch(line_color='white',pitch_color='#02540b')
     fig, ax = pitch.grid(grid_height=0.9, title_height=0.06, axis=False,endnote_height=0.04, title_space=0, endnote_space=0)
     for i in player_df.index:
@@ -57,12 +54,8 @@ def mapa_passes(player_name, player_df):
         y = player_df['y'][i]
         dx = player_df['end_x'][i] - player_df['x'][i]
         dy = player_df['end_y'][i] - player_df['y'][i]
-        # if df['outcome_name'][i] != 'Incomplete':
         ax['pitch'].arrow(x,y,dx,dy,color='#0dff00',length_includes_head=True,head_width=1,head_length=0.8)
         pitch.scatter(player_df['x'][i],player_df['y'][i],color='#0dff00',ax=ax['pitch'])
-        # else:
-        # ax['pitch'].arrow(x,y,dx,dy,color='red',length_includes_head=True,head_width=1,head_length=0.8)
-        # pitch.scatter(player_df['x'][i],player_df['y'][i],color='red',ax=ax['pitch'])
     fig.suptitle("Passes de: " + player_name, fontsize = 20)
     st.pyplot(fig)
 #=============================== DATAFRAME
@@ -220,11 +213,9 @@ columns_default = [
     if coluna in columns_event
 ]
 
-
 # Executada quando o usuário clica no botão
 def resetar_colunas(colunas_padrao):
     st.session_state["colunas_selecionadas"] = colunas_padrao.copy()
-
 
 # Define a seleção inicial
 if "colunas_selecionadas" not in st.session_state:
@@ -325,7 +316,6 @@ with col2:
     fig, ax = plt.subplots(figsize=(1, 1))
     wedges, texts, autotexts = ax.pie(
         data,
-        # labels=labels,
         colors=colors,
         startangle=90,
         autopct='%.0f%%',
@@ -334,7 +324,6 @@ with col2:
     ax.legend(wedges, 
             labels,
             loc="center left", 
-            #   bbox_to_anchor=(2, 0, 0.5, 1))
             bbox_to_anchor=(1, 0.5),
             fontsize=5
     )
@@ -346,7 +335,7 @@ with col2:
 equipes = agg_qt_pass_by_mint[
     "possession_team"
 ].dropna().unique()
-cores = colors # Cor já definida na visualização anterior
+cores = colors 
 mapa_cores = dict(zip(equipes, cores))
 
 # Cria as visualizações
@@ -458,37 +447,7 @@ with tab1:
         columns=["end_x", "end_y"],
         index=player_pass.index
     )
-    mapa_passes(jogador_selecionado, player_pass)
-
-
-    # # Chutes
-    # player_shot = (event_player[
-    #     (event_player["type"].str.lower()=="shot")]
-    #     [["location","pass_end_location"]]
-    # ).dropna().reset_index()
-    # player_shot[["x", "y"]] = pd.DataFrame(
-    #     player_shot["location"].tolist(),
-    #     columns=["x", "y"],
-    #     index=player_shot.index
-    # )
-    # player_shot[["end_x", "end_y"]] = pd.DataFrame(
-    #     player_shot["pass_end_location"].tolist(),
-    #     columns=["end_x", "end_y"],
-    #     index=player_shot.index
-    # )
-    # if len(player_shot.count()) == 0: 
-    #     st.text("Jogagor não teve chutes.")
-    #     print(len(f"Quantidade de chutes: {player_shot.count()}"))
-    # else: 
-    #     st.text("Chutes:")
-    #     pitch = VerticalPitch(corner_arcs=True, half=True)
-    #     fig, ax = pitch.draw(figsize=(4, 6))
-    #     pitch.scatter(player_shot['x'], 
-    #                   player_shot['y'], 
-    #                   ax=ax,
-    #                   color="red")
-    #     st.pyplot(fig)
-        
+    mapa_passes(jogador_selecionado, player_pass)        
     
 #--------------------
 # Tab sobre partida

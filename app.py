@@ -4,6 +4,7 @@ from mplsoccer import Pitch, VerticalPitch
 from statsbombpy import sb
 import matplotlib.pyplot as plt
 import seaborn as sns
+import time
 
 # Configura o layout do streamlit
 st.set_page_config(layout= 'wide')
@@ -149,26 +150,78 @@ match_id = matches_selected_by_data["match_id"].iloc[0]
 # Dataframe da partida
 event = sb.events(match_id=match_id)
 
-# st.dataframe(matches_selected_by_data)
-
 #---------- Metrics
-col1, col2, col3, col4 = st.columns((5,1,1,1))
-with col2:
-    # Total de Gols
-    total_gols = matches_selected_by_data["home_score"] + matches_selected_by_data["away_score"]
-    st.metric('Total de Gols', total_gols)
-with col3:
+col1, col2, col3, col4, col5 = st.columns((1,1,1,1,2))
+with col1:
     # Total de Passes
     total_passes = (event["type"]== "Pass").sum()
-    st.metric("Total de Passes",total_passes)
-with col4:
+    st.metric("Total de Passes",total_passes,border=True, icon="⤴️") 
+with col2:
     # Total de chutes
     total_chute = (event["type"]=="Shot").sum()
-    st.metric("Total de Chutes",total_chute)
+    st.metric("Total de Chutes",total_chute,border=True, icon="👟")
+with col3:
+    # Total de Gols
+    total_home_score = matches_selected_by_data["home_score"].sum()
+    total_away_score = matches_selected_by_data["away_score"].sum()
+    total_gols = total_home_score + total_away_score
+    st.metric('Total de Gols', total_gols,border=True, icon="⚽️")
+with col4:
+    # Taxa de Gols
+    tx_gol = ((total_gols/total_chute)*100).round(2)
+    st.metric("Taxa de Gols",f"{tx_gol}%",border=True)
+
 
 # Exibe ataframe da partida
 st.subheader("Dados da Partida (Event)")
-st.dataframe(event)
+# periods_event = event["period"].unique()
+
+columns_event = event.columns
+columns_default = ["duration", "pass_recipient","period","player","position","possession_team","second","team"] 
+# select_period = st.multiselect(label="Escolha o tempo da partida",
+#                             options=periods_event,
+#                             default=periods_event,
+#                             key='tempo_selecionado')
+
+
+qtd_row = event.shape[0]
+df_length = st.number_input(label=f"Defina a quantidade de linhas (max: {qtd_row})",
+                               min_value=1,
+                               max_value=qtd_row,
+                               value=1,
+                               key="qdt_linhas"
+                               )
+columns_selected = st.multiselect(label="Escolha as colunas para serem exibidas",
+                                  options=columns_event,
+                                  default=columns_default,
+                                  key="colunas_selecionadas"
+                                  )
+
+event_selected = event[columns_selected].head(df_length)
+st.dataframe(event_selected)
+
+#---------- Download, Spinner e Progress Bar
+# Cria o arquivo em csv
+if st.button("Preparar CSV"):
+    with st.spinner("Preparando os dados...", show_time=True,width=300):
+        time.sleep(3)
+        barra = st.progress(0, text="Preparando o arquivo...")
+        barra.progress(50, text="Convertendo para CSV...")
+
+        csv_data = event_selected.to_csv(index=False).encode("utf-8-sig")
+        barra.progress(100, text="CSV pronto!")
+
+    st.session_state["csv_data"] = csv_data
+    st.success("Arquivo pronto para baixar! ✅")
+    if "csv_data" in st.session_state:
+        st.download_button(
+            label="Clique para baixar em CSV",
+            data=st.session_state["csv_data"],
+            file_name="dados_filtrados.csv",
+            mime="text/csv",
+            icon=":material/download:",
+            on_click="ignore",
+        )
 
 #---------- Visualizações
 st.markdown("---")
@@ -203,20 +256,26 @@ labels = total_pass_by_team['possession_team']
 colors = sns.color_palette('Set2')
 
 #---------- Visualização pizza
-fig, ax = plt.subplots(figsize=(6, 3))
-wedges, texts, autotexts = ax.pie(
-    data,
-    labels=labels,
-    colors=colors,
-    startangle=90,
-    autopct='%.0f%%',
-    wedgeprops=dict(width=0.5)
-)
-ax.legend(wedges, labels, title="Classes", loc="center left", bbox_to_anchor=(1, 0, 0.5, 1))
-fig.suptitle(
-    "Percentual de Passes"
-)
-st.pyplot(fig)
+col1, col2, col3 = st.columns((0.5,1,0.5))
+with col2:
+    st.subheader("Posse de Bola", text_alignment = "center")
+    fig, ax = plt.subplots(figsize=(1, 1))
+    wedges, texts, autotexts = ax.pie(
+        data,
+        # labels=labels,
+        colors=colors,
+        startangle=90,
+        autopct='%.0f%%',
+        wedgeprops=dict(width=0.5)
+    )
+    ax.legend(wedges, 
+            labels,
+            loc="center left", 
+            #   bbox_to_anchor=(2, 0, 0.5, 1))
+            bbox_to_anchor=(1, 0.5),
+            fontsize=5
+    )
+    st.pyplot(fig)
 
 #---------- Visualização Linhas
 # Comparação de passes

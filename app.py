@@ -10,7 +10,7 @@ import time
 st.set_page_config(layout= 'wide')
 
 
-#=============================== FUNÇÕES E CACHE_DATA
+#=============================== FUNÇÕES E CACHE_DATA 
 @st.cache_data(ttl=3600, show_spinner="Carregando competições...")
 def carregar_competicoes():
     df = sb.competitions()

@@ -8,9 +8,40 @@ import time
 
 # Configura o layout do streamlit
 st.set_page_config(layout= 'wide')
-#=============================== FUNÇÕES
+
+
+#=============================== FUNÇÕES E CACHE DATA
+@st.cache_data(ttl=3600, show_spinner="Carregando competições...")
+def carregar_competicoes():
+    df = sb.competitions()
+    df["competition_name"] = df["competition_name"].replace(
+        "1. Bundesliga", "Bundesliga"
+    )
+    return df
+
+@st.cache_data(
+    ttl=3600,
+    max_entries=30,
+    show_spinner="Carregando partidas..."
+)
+def carregar_partidas(competition_id, season_id):
+    df = sb.matches(
+        competition_id=competition_id,
+        season_id=season_id
+    )
+    df["matche"] = df["home_team"] + " x " + df["away_team"]
+    return df
+
+
+@st.cache_data(
+    ttl=3600,
+    max_entries=10,
+    show_spinner="Carregando eventos da partida..."
+)
+def carregar_eventos(match_id):
+    return sb.events(match_id=match_id)
+
 # Cria lista 
-@st.cache_data
 def lista_opcoes(dataframe_lista: pd.DataFrame,
                  coluna: str) -> list:
     return sorted(dataframe_lista[coluna].unique().tolist())
@@ -37,9 +68,7 @@ def mapa_passes(player_name, player_df):
 #=============================== DATAFRAME
 with st.container(): 
     # Importa dataframes
-    competitions = sb.competitions()
-    # Ajusta o dataframe
-    competitions["competition_name"] = competitions["competition_name"].replace("1. Bundesliga","Bundesliga")
+    competitions = carregar_competicoes()
 
 #=============================== SIDEBAR
 # Lista campeonato
@@ -80,8 +109,10 @@ with st.sidebar:
     competicao = competition_selected["competition_name"].iloc[0]
 
     # Importa dataframe da partica conforme IDs competição e partida
-    matches = sb.matches(competition_id=competition_id ,season_id=season_id)
-    matches["matche"] = matches["home_team"] + " x " + matches["away_team"]
+    matches = carregar_partidas(
+    int(competition_id),
+    int(season_id)
+    )
 
     # Lista de partidas
     lista_partidas = lista_opcoes(matches,"matche")
@@ -143,12 +174,12 @@ st.markdown(
         unsafe_allow_html=True
     )
 st.subheader("")
-
+st.text("Resumo da partida")
 #---------- Dataframe Match
 # ID da partida
 match_id = matches_selected_by_data["match_id"].iloc[0]
 # Dataframe da partida
-event = sb.events(match_id=match_id)
+event = carregar_eventos(int(match_id))
 
 #---------- Metrics
 col1, col2, col3, col4, col5 = st.columns((1,1,1,1,2))
@@ -173,29 +204,60 @@ with col4:
 
 
 # Exibe ataframe da partida
-st.subheader("Dados da Partida (Event)")
-# periods_event = event["period"].unique()
+st.markdown("---")
+st.subheader("Dados da Partida")
+st.text("Você pode personalizar como exibir detalhadamente as informações da partida")
+columns_event = event.columns.tolist()
 
-columns_event = event.columns
-columns_default = ["duration", "pass_recipient","period","player","position","possession_team","second","team"] 
-# select_period = st.multiselect(label="Escolha o tempo da partida",
-#                             options=periods_event,
-#                             default=periods_event,
-#                             key='tempo_selecionado')
+columns_default = [
+    "duration", "pass_recipient", "period", "player",
+    "position", "possession_team", "second", "team"
+]
 
+# Mantém apenas colunas existentes na partida
+columns_default = [
+    coluna for coluna in columns_default
+    if coluna in columns_event
+]
+
+
+# Executada quando o usuário clica no botão
+def resetar_colunas(colunas_padrao):
+    st.session_state["colunas_selecionadas"] = colunas_padrao.copy()
+
+
+# Define a seleção inicial
+if "colunas_selecionadas" not in st.session_state:
+    st.session_state["colunas_selecionadas"] = columns_default.copy()
+
+# Remove seleções que não existam ao trocar de partida
+st.session_state["colunas_selecionadas"] = [
+    coluna
+    for coluna in st.session_state["colunas_selecionadas"]
+    if coluna in columns_event
+]
 
 qtd_row = event.shape[0]
-df_length = st.number_input(label=f"Defina a quantidade de linhas (max: {qtd_row})",
-                               min_value=1,
-                               max_value=qtd_row,
-                               value=1,
-                               key="qdt_linhas"
-                               )
-columns_selected = st.multiselect(label="Escolha as colunas para serem exibidas",
-                                  options=columns_event,
-                                  default=columns_default,
-                                  key="colunas_selecionadas"
-                                  )
+
+df_length = st.number_input(
+    label=f"Quantidade de linhas (max: {qtd_row})",
+    min_value=1,
+    max_value=qtd_row,
+    value=1,
+    key="qdt_linhas"
+)
+
+columns_selected = st.multiselect(
+    label="Escolha as colunas",
+    options=columns_event,
+    key="colunas_selecionadas"
+)
+
+st.button(
+    label="Reset colunas",
+    on_click=resetar_colunas,
+    args=(columns_default,)
+)
 
 event_selected = event[columns_selected].head(df_length)
 st.dataframe(event_selected)
@@ -255,10 +317,11 @@ data = total_pass_by_team["total_pass"]
 labels = total_pass_by_team['possession_team']
 colors = sns.color_palette('Set2')
 
+st.subheader("Gráficos")
 #---------- Visualização pizza
 col1, col2, col3 = st.columns((0.5,1,0.5))
 with col2:
-    st.subheader("Posse de Bola", text_alignment = "center")
+    st.markdown("#### Posse de Bola")
     fig, ax = plt.subplots(figsize=(1, 1))
     wedges, texts, autotexts = ax.pie(
         data,
